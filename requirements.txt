@@ -1,0 +1,16 @@
+# Core data handling
+pandas
+numpy
+
+# Machine Learning (baseline + later use)
+scikit-learn
+
+# NLP & text processing (Day-2 onwards)
+nltk
+sentence-transformers
+
+# Progress & utilities
+tqdm
+
+# (Optional but useful for experiments/debug)
+matplotlib
