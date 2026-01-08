@@ -51,3 +51,23 @@ class BaselineConsistencyModel:
         features = self._extract_features(text).reshape(1, -1)
         features = self.scaler.transform(features)
         return self.model.predict(features)[0]
+
+    def predict_with_confidence(self, text):
+        claims = self.parser.split_into_claims(text)
+        hard = detect_contradictions(claims)
+
+        features = self._extract_features(text).reshape(1, -1)
+        features = self.scaler.transform(features)
+
+        probas = self.model.predict_proba(features)[0]
+        p_consistent = probas[1]
+        confidence = float(max(probas))
+
+        # ✅ HACKATHON-SAFE RULE
+        if len(claims) == 1 and len(hard) == 0:
+            prediction = 1  # consistent
+        else:
+            prediction = int(p_consistent >= 0.6)
+
+        return prediction, confidence
+    
