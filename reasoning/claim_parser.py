@@ -1,21 +1,20 @@
-import nltk
 import re
+import nltk
 from nltk.tokenize import sent_tokenize
 
-# Download required resources (runs once, cached later)
-nltk.download("punkt")
-nltk.download("punkt_tab")
+# Download once safely
+try:
+    nltk.data.find("tokenizers/punkt")
+except LookupError:
+    nltk.download("punkt")
+    nltk.download("punkt_tab")
+
 
 class ClaimParser:
-    def __init__(self):
-        pass
-
     def split_into_claims(self, text):
         sentences = sent_tokenize(text)
-        claims = [self._clean_sentence(s) for s in sentences if len(s.strip()) > 5]
-        return claims
+        return [self._clean(s) for s in sentences if len(s.strip()) > 5]
 
-    def _clean_sentence(self, sentence):
-        sentence = sentence.strip()
-        sentence = re.sub(r"\s+", " ", sentence)
-        return sentence.lower()
+    def _clean(self, s):
+        s = re.sub(r"\s+", " ", s.strip())
+        return s.lower()

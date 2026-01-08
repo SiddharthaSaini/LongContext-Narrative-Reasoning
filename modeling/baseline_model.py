@@ -1,46 +1,53 @@
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
-import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 from reasoning.claim_parser import ClaimParser
 from reasoning.signals import detect_contradictions
+from reasoning.scoring import contradiction_score
 
 
 class BaselineConsistencyModel:
     def __init__(self):
         self.parser = ClaimParser()
-        self.model = LogisticRegression()
+        self.scaler = StandardScaler()
+        self.model = LogisticRegression(
+            class_weight="balanced",
+            max_iter=1000,
+            random_state=42
+        )
 
     def _extract_features(self, text):
-        """
-        Convert reasoning signals into numerical features
-        """
         claims = self.parser.split_into_claims(text)
-        signals = detect_contradictions(claims)
+        hard = detect_contradictions(claims)
+        soft = contradiction_score(claims)
 
-        features = {
-            "num_claims": len(claims),
-            "num_contradictions": len(signals)
-        }
-
-        return np.array(list(features.values()))
+        return np.array([
+            len(claims),        # narrative density
+            len(hard),          # explicit contradictions
+            soft                # semantic contradiction strength
+        ], dtype=float)
 
     def train(self, df):
         X = np.vstack(df["content"].apply(self._extract_features))
         y = df["label"].values
 
+        # scale features (CRITICAL FIX)
+        X = self.scaler.fit_transform(X)
+
         X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.25, random_state=42, stratify=y
+            X, y, test_size=0.25, stratify=y, random_state=42
         )
 
         self.model.fit(X_train, y_train)
-
         preds = self.model.predict(X_val)
 
         print("\nValidation Results:")
-        print(classification_report(y_val, preds))
+        print(classification_report(y_val, preds, zero_division=0))
 
     def predict(self, text):
         features = self._extract_features(text).reshape(1, -1)
+        features = self.scaler.transform(features)
         return self.model.predict(features)[0]
